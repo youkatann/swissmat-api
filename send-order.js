@@ -4,17 +4,28 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export async function POST(req) {
-  if (req.method !== 'POST') {
-    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 })
-  }
+// CORS-заголовки
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*', // у продакшні заміни '*' на 'https://swiss-mat.ch'
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
 
+export async function OPTIONS() {
+  // Відповідь на preflight-запит
+  return NextResponse.json({}, { status: 200, headers: corsHeaders })
+}
+
+export async function POST(req) {
   try {
     const form = await req.json()
 
-    // Простенька валідація
+    // Валідація
     if (!form.email || !form.name || !form.privacy) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400, headers: corsHeaders }
+      )
     }
 
     const carInfo = form.customBrand
@@ -38,18 +49,26 @@ export async function POST(req) {
       from: 'SwissMat <no-reply@swiss-mat.ch>',
       to: ['swissmat.info@gmail.com'],
       subject,
-      html: body
-      // можна додати react: <EmailTemplate {...} /> замість html
+      html: body,
     })
 
     if (error) {
       console.error(error)
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400, headers: corsHeaders }
+      )
     }
 
-    return NextResponse.json({ success: true, id: data.id })
+    return NextResponse.json(
+      { success: true, id: data.id },
+      { status: 200, headers: corsHeaders }
+    )
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json(
+      { error: err.message },
+      { status: 500, headers: corsHeaders }
+    )
   }
 }
