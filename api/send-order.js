@@ -4,33 +4,43 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// CORS-заголовки
+// ---- CORS конфіг ----
+const allowedOrigin =
+  process.env.NODE_ENV === 'production'
+    ? 'https://swiss-mat.ch'
+    : '*'
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // у продакшні заміни '*' на 'https://swiss-mat.ch'
+  'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  Vary: 'Origin', // щоб уникнути кешування різних origin
 }
 
+// ---- OPTIONS ----
 export async function OPTIONS() {
-  // Відповідь на preflight-запит
-  return NextResponse.json({}, { status: 200, headers: corsHeaders })
+  return new NextResponse(null, {
+    status: 204, // без тіла
+    headers: corsHeaders,
+  })
 }
 
+// ---- POST ----
 export async function POST(req) {
   try {
     const form = await req.json()
 
-    // Валідація
+    // Проста валідація
     if (!form.email || !form.name || !form.privacy) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
+      return new NextResponse(
+        JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: corsHeaders }
       )
     }
 
     const carInfo = form.customBrand
       ? form.customText
-      : `${form.brand} ${form.model}`
+      : `${form.brand || 'Unknown'} ${form.model || ''}`
 
     const subject = `Car Mat Order: ${carInfo}`
     const body = `
@@ -53,21 +63,21 @@ export async function POST(req) {
     })
 
     if (error) {
-      console.error(error)
-      return NextResponse.json(
-        { error: error.message },
+      console.error('Resend error:', error)
+      return new NextResponse(
+        JSON.stringify({ error: error.message }),
         { status: 400, headers: corsHeaders }
       )
     }
 
-    return NextResponse.json(
-      { success: true, id: data.id },
+    return new NextResponse(
+      JSON.stringify({ success: true, id: data?.id || null }),
       { status: 200, headers: corsHeaders }
     )
   } catch (err) {
-    console.error(err)
-    return NextResponse.json(
-      { error: err.message },
+    console.error('Send-order exception:', err)
+    return new NextResponse(
+      JSON.stringify({ error: err.message }),
       { status: 500, headers: corsHeaders }
     )
   }
