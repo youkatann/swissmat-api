@@ -31,6 +31,11 @@ export default async function handler(req, res) {
         <p><b>Email:</b> ${data.email}</p>
         <p><b>Phone:</b> ${data.phone}</p>
         <p><b>Comment:</b> ${data.comment || '—'}</p>
+        <hr/>
+        <p><b>UTM Source:</b> ${form.utm_source || '—'}</p>
+        <p><b>UTM Medium:</b> ${form.utm_medium || '—'}</p>
+        <p><b>UTM Campaign:</b> ${form.utm_campaign || '—'}</p>
+        <p><b>UTM Content:</b> ${form.utm_content || '—'}</p>
       `,
     })
 
