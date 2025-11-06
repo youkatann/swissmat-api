@@ -1,5 +1,6 @@
 {
   "name": "swissmat-api",
+  "version": "1.0.0",
   "type": "module",
   "dependencies": {
     "resend": "^3.0.0"
