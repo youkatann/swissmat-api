@@ -1,31 +1,24 @@
-// app/api/meta/route.js
-import { NextResponse } from 'next/server'
+// api/meta.js
+export default async function handler(req, res) {
+  // --- CORS headers ---
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // у продакшні заміни на 'https://swiss-mat.ch'
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  Vary: 'Origin',
-}
+  // --- Preflight (OPTIONS) ---
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end()
+  }
 
-// --- OPTIONS handler ---
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders,
-  })
-}
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-// --- POST handler ---
-export async function POST(req) {
   try {
-    const { event_name, event_id, user_data, custom_data } = await req.json()
+    const { event_name, event_id, user_data, custom_data } = req.body
 
     if (!event_name || !user_data) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: corsHeaders }
-      )
+      return res.status(400).json({ error: 'Missing required fields' })
     }
 
     const payload = {
@@ -41,7 +34,7 @@ export async function POST(req) {
       ],
     }
 
-    const fbResponse = await fetch(
+    const fbRes = await fetch(
       `https://graph.facebook.com/v18.0/${process.env.META_PIXEL_ID}/events?access_token=${process.env.META_ACCESS_TOKEN}`,
       {
         method: 'POST',
@@ -50,17 +43,10 @@ export async function POST(req) {
       }
     )
 
-    const fbJson = await fbResponse.json()
-
-    return new NextResponse(JSON.stringify(fbJson), {
-      status: fbResponse.ok ? 200 : 400,
-      headers: corsHeaders,
-    })
+    const result = await fbRes.json()
+    res.status(200).json(result)
   } catch (err) {
     console.error('CAPI error:', err)
-    return new NextResponse(
-      JSON.stringify({ error: 'CAPI failed', details: err.message }),
-      { status: 500, headers: corsHeaders }
-    )
+    res.status(500).json({ error: 'CAPI failed', details: err.message })
   }
 }
